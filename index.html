@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KetoTrack</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="app-header-inner">
+      <span class="app-logo">🥑 KetoTrack</span>
+      <span id="header-date" class="header-date"></span>
+    </div>
+  </header>
+
+  <main id="app">
+
+    <!-- ── DASHBOARD ─────────────────────────────── -->
+    <section class="tab-panel active" id="tab-dashboard">
+      <div class="carb-ring-card card">
+        <p class="card-label">Net Carbs Today</p>
+        <svg id="carb-ring" viewBox="0 0 180 180" width="180" height="180" aria-label="Carb intake ring">
+          <circle cx="90" cy="90" r="76" class="ring-track"/>
+          <circle id="carb-ring-progress" cx="90" cy="90" r="76"
+                  class="ring-progress"
+                  transform="rotate(-90 90 90)"/>
+          <text id="ring-carbs-val"  x="90" y="83"  class="ring-val" text-anchor="middle">0g</text>
+          <text id="ring-carbs-lim"  x="90" y="104" class="ring-sub" text-anchor="middle">/ 20g limit</text>
+          <text id="ring-carbs-rem"  x="90" y="122" class="ring-rem" text-anchor="middle">20g left</text>
+        </svg>
+        <div class="macro-row">
+          <div class="macro-pill">
+            <span id="dash-calories" class="macro-val">0</span>
+            <span class="macro-lbl">kcal</span>
+          </div>
+          <div class="macro-pill">
+            <span id="dash-protein" class="macro-val">0</span>
+            <span class="macro-lbl">protein g</span>
+          </div>
+          <div class="macro-pill">
+            <span id="dash-fat" class="macro-val">0</span>
+            <span class="macro-lbl">fat g</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card macro-chart-card">
+        <p class="card-label">Macro Split — Today</p>
+        <div id="macro-chart-wrap" style="display:none">
+          <canvas id="macro-chart"></canvas>
+        </div>
+        <div id="macro-chart-legend" class="macro-chart-legend" style="display:none"></div>
+        <div id="macro-chart-empty" class="chart-placeholder">Log a meal to see your macro split.</div>
+      </div>
+
+      <div class="weight-card card">
+        <div class="weight-card-inner">
+          <div>
+            <p class="card-label">Current Weight</p>
+            <div class="weight-display">
+              <span id="dash-weight-val" class="weight-big">--</span>
+              <span id="dash-weight-unit" class="weight-unit">kg</span>
+            </div>
+            <p id="dash-weight-date" class="weight-date">Not logged yet</p>
+          </div>
+          <div class="bmi-badge-wrap">
+            <p class="card-label">BMI</p>
+            <span id="dash-bmi" class="bmi-badge">--</span>
+            <p id="dash-bmi-cat" class="bmi-cat"></p>
+          </div>
+        </div>
+        <button class="btn-secondary btn-sm" onclick="Nav.go('weight')">Log Weight</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header-row">
+          <h2 class="card-title">Today's Meals</h2>
+          <button class="btn-icon" onclick="Nav.go('log-meal')" title="Add meal">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          </button>
+        </div>
+        <ul id="meals-today-list" class="meals-list">
+          <li class="empty-state">No meals logged today yet.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── LOG MEAL ───────────────────────────────── -->
+    <section class="tab-panel" id="tab-log-meal">
+      <div class="card">
+        <h2 class="card-title">Build a Meal</h2>
+        <div class="food-search-wrap">
+          <div class="food-search-row">
+            <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="food-search-input" class="food-search-input" placeholder="Search any food…" autocomplete="off" />
+            <span id="food-search-spinner" class="search-spinner" style="display:none"></span>
+          </div>
+          <ul id="food-search-results" class="food-search-results" style="display:none"></ul>
+        </div>
+        <p class="quick-add-label">Quick add</p>
+        <div id="food-chips" class="food-chips"></div>
+      </div>
+
+      <div class="card" id="ingredient-builder-card" style="display:none">
+        <div class="card-header-row">
+          <h2 class="card-title">Ingredients</h2>
+          <button type="button" class="btn-secondary btn-sm" id="clear-ingredients-btn">Clear all</button>
+        </div>
+        <ul id="ingredient-list" class="ingredient-list"></ul>
+        <div id="ingredient-totals" class="ingredient-totals"></div>
+        <div class="form-group" style="margin-top:16px">
+          <label for="builder-meal-name">Meal Name</label>
+          <input type="text" id="builder-meal-name" placeholder="e.g. Breakfast" />
+        </div>
+        <div class="form-group">
+          <label for="builder-meal-time">Time Eaten</label>
+          <input type="time" id="builder-meal-time" />
+        </div>
+        <p id="builder-feedback" class="form-feedback" aria-live="polite"></p>
+        <button type="button" class="btn-primary" id="log-ingredients-btn">Log Meal</button>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Enter Manually</h2>
+        <form id="meal-form" autocomplete="off">
+          <div class="form-group">
+            <label for="meal-name">Meal / Food Name</label>
+            <input type="text" id="meal-name" placeholder="e.g. Scrambled eggs" required />
+          </div>
+          <div class="form-group">
+            <label for="meal-time">Time Eaten</label>
+            <input type="time" id="meal-time" />
+          </div>
+          <div class="macro-grid">
+            <div class="form-group">
+              <label for="meal-carbs">Carbs (g) <span class="required">*</span></label>
+              <input type="number" id="meal-carbs" placeholder="0" min="0" step="0.1" required />
+            </div>
+            <div class="form-group">
+              <label for="meal-calories">Calories</label>
+              <input type="number" id="meal-calories" placeholder="0" min="0" />
+            </div>
+            <div class="form-group">
+              <label for="meal-protein">Protein (g)</label>
+              <input type="number" id="meal-protein" placeholder="0" min="0" step="0.1" />
+            </div>
+            <div class="form-group">
+              <label for="meal-fat">Fat (g)</label>
+              <input type="number" id="meal-fat" placeholder="0" min="0" step="0.1" />
+            </div>
+          </div>
+          <p id="form-feedback" class="form-feedback" aria-live="polite"></p>
+          <button type="submit" class="btn-primary">Add Meal</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ── WEIGHT ─────────────────────────────────── -->
+    <section class="tab-panel" id="tab-weight">
+      <div class="card">
+        <h2 class="card-title">Log Today's Weight</h2>
+        <div class="weight-log-row">
+          <input type="number" id="weight-input" placeholder="0.0" min="1" step="0.1" />
+          <span id="weight-unit-label" class="unit-label">kg</span>
+          <button id="save-weight-btn" class="btn-primary btn-inline">Save</button>
+        </div>
+        <div id="bmi-live" class="bmi-live" aria-live="polite"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Weight Trend</h2>
+        <div id="chart-placeholder" class="chart-placeholder">Log at least 2 weights to see your trend.</div>
+        <canvas id="weight-chart" style="display:none"></canvas>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">BMI Scale</h2>
+        <div class="bmi-scale-wrap">
+          <div class="bmi-scale-bar">
+            <div class="bmi-seg seg-blue"  title="Underweight < 18.5"></div>
+            <div class="bmi-seg seg-green" title="Normal 18.5–24.9"></div>
+            <div class="bmi-seg seg-orange"title="Overweight 25–29.9"></div>
+            <div class="bmi-seg seg-red"   title="Obese ≥ 30"></div>
+          </div>
+          <div class="bmi-pointer-row">
+            <div id="bmi-pointer" class="bmi-pointer" style="left:0%">▲</div>
+          </div>
+          <div class="bmi-labels">
+            <span>Underweight</span>
+            <span>Normal</span>
+            <span>Overweight</span>
+            <span>Obese</span>
+          </div>
+        </div>
+        <p id="bmi-pointer-label" class="bmi-pointer-label"></p>
+      </div>
+    </section>
+
+    <!-- ── HISTORY ─────────────────────────────────── -->
+    <section class="tab-panel" id="tab-history">
+      <div class="history-controls">
+        <label for="history-month" class="sr-only">Select month</label>
+        <select id="history-month" class="month-select"></select>
+      </div>
+      <div id="history-list"></div>
+    </section>
+
+    <!-- ── SETTINGS ───────────────────────────────── -->
+    <section class="tab-panel" id="tab-settings">
+      <div class="card">
+        <h2 class="card-title">Keto Goals</h2>
+        <form id="settings-form">
+          <div class="form-group">
+            <label for="set-carb-limit">Daily Carb Limit (g)</label>
+            <input type="number" id="set-carb-limit" min="5" max="150" value="20" />
+          </div>
+          <div class="form-group">
+            <label for="set-warn-threshold">Warning Threshold
+              <output id="warn-output" class="range-output">80%</output>
+            </label>
+            <input type="range" id="set-warn-threshold" min="50" max="100" value="80" />
+            <p class="field-hint">Show orange warning when you've hit this % of your carb limit.</p>
+          </div>
+
+          <h3 class="settings-section-title">Body Measurements</h3>
+
+          <div class="form-group">
+            <label for="set-height-unit">Height Unit</label>
+            <select id="set-height-unit">
+              <option value="cm">Centimetres (cm)</option>
+              <option value="ft">Feet &amp; Inches (ft/in)</option>
+            </select>
+          </div>
+          <div class="form-group" id="height-cm-group">
+            <label for="set-height-cm">Height (cm)</label>
+            <input type="number" id="set-height-cm" min="50" max="300" placeholder="170" />
+          </div>
+          <div class="form-group" id="height-ft-group" style="display:none">
+            <label>Height (ft / in)</label>
+            <div class="ft-in-row">
+              <input type="number" id="set-height-ft" min="1" max="8" placeholder="5" />
+              <span class="unit-sep">ft</span>
+              <input type="number" id="set-height-in" min="0" max="11" placeholder="10" />
+              <span class="unit-sep">in</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="set-weight-unit">Weight Unit</label>
+            <select id="set-weight-unit">
+              <option value="kg">Kilograms (kg)</option>
+              <option value="lbs">Pounds (lbs)</option>
+            </select>
+            <p class="field-hint">Note: changing this unit will not convert existing weight entries.</p>
+          </div>
+
+          <button type="submit" class="btn-primary">Save Settings</button>
+          <p id="settings-feedback" class="form-feedback" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="card danger-zone">
+        <h2 class="card-title danger-title">Danger Zone</h2>
+        <p class="field-hint">This will permanently delete all meal and weight history. Settings are kept.</p>
+        <button id="clear-data-btn" class="btn-danger">Clear All Data</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── TAB BAR ─────────────────────────────────── -->
+  <nav class="tab-bar" role="navigation" aria-label="Main navigation">
+    <button class="tab-btn active" data-tab="dashboard" aria-label="Dashboard">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Dashboard</span>
+    </button>
+    <button class="tab-btn" data-tab="log-meal" aria-label="Log Meal">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      <span>Log Meal</span>
+    </button>
+    <button class="tab-btn" data-tab="weight" aria-label="Weight">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 3a2 2 0 0 1 2 2H10a2 2 0 0 1 2-2z"/><path d="M5 7h14l-1.5 11H6.5z"/><path d="M12 12v3"/></svg>
+      <span>Weight</span>
+    </button>
+    <button class="tab-btn" data-tab="history" aria-label="History">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+      <span>History</span>
+    </button>
+    <button class="tab-btn" data-tab="settings" aria-label="Settings">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
