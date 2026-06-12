@@ -63,6 +63,19 @@ const Storage = {
       localStorage.setItem('keto_meals', JSON.stringify(all));
     }
   },
+  getCustomFoods() {
+    try { return JSON.parse(localStorage.getItem('keto_custom_foods') || '[]'); }
+    catch { return []; }
+  },
+  saveCustomFood(food) {
+    const all = Storage.getCustomFoods();
+    all.push(food);
+    localStorage.setItem('keto_custom_foods', JSON.stringify(all));
+  },
+  deleteCustomFood(id) {
+    const all = Storage.getCustomFoods().filter(f => f.id !== id);
+    localStorage.setItem('keto_custom_foods', JSON.stringify(all));
+  },
   getWeights() {
     try { return JSON.parse(localStorage.getItem('keto_weights') || '{}'); }
     catch { return {}; }
@@ -316,15 +329,37 @@ const LogMeal = {
   renderChips() {
     const container = document.getElementById('food-chips');
     container.innerHTML = '';
-    FOOD_DB.forEach((food, i) => {
+
+    const addChip = (food, deletable) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'food-chip-wrap';
+
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'food-chip';
-      btn.dataset.foodIndex = i;
       btn.innerHTML = `<span class="chip-name">${escHtml(food.name)}</span><span class="chip-carbs">${food.carbs}g carbs / ${food.qty} ${food.unit}</span>`;
       btn.addEventListener('click', () => IngredientBuilder.add(food));
-      container.appendChild(btn);
-    });
+      wrap.appendChild(btn);
+
+      if (deletable) {
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'chip-delete';
+        del.setAttribute('aria-label', `Remove ${food.name}`);
+        del.textContent = '×';
+        del.addEventListener('click', e => {
+          e.stopPropagation();
+          Storage.deleteCustomFood(food.id);
+          LogMeal.renderChips();
+        });
+        wrap.appendChild(del);
+      }
+
+      container.appendChild(wrap);
+    };
+
+    Storage.getCustomFoods().forEach(food => addChip(food, true));
+    FOOD_DB.forEach(food => addChip(food, false));
   },
 
   handleSubmit(e) {
@@ -356,6 +391,11 @@ const LogMeal = {
       protein,
       fat,
     };
+
+    if (document.getElementById('meal-save-food').checked) {
+      Storage.saveCustomFood({ id: Utils.genId(), name, carbs: parseFloat(carbsRaw), calories, protein, fat, qty: 100, unit: 'g' });
+      LogMeal.renderChips();
+    }
 
     Storage.saveMeal(Utils.todayStr(), meal);
     e.target.reset();
