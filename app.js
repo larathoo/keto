@@ -627,23 +627,24 @@ const FoodSearch = {
 
   async search(query) {
     if (FoodSearch._abortController) FoodSearch._abortController.abort();
-    FoodSearch._abortController = new AbortController();
+    const controller = new AbortController();
+    FoodSearch._abortController = controller;
     FoodSearch._setSpinner(true);
 
     try {
       const url =
-        `https://world.openfoodfacts.org/cgi/search.pl` +
-        `?search_terms=${encodeURIComponent(query)}` +
-        `&search_simple=1&action=process&json=1&page_size=8` +
+        `https://world.openfoodfacts.org/api/v2/search` +
+        `?q=${encodeURIComponent(query)}` +
+        `&page_size=8` +
         `&fields=product_name,brands,nutriments`;
-      const res = await fetch(url, { signal: FoodSearch._abortController.signal });
+      const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       FoodSearch._setSpinner(false);
       FoodSearch._showResults(data.products || []);
     } catch (err) {
-      if (err.name === 'AbortError') return;
       FoodSearch._setSpinner(false);
+      if (err.name === 'AbortError') return;
       FoodSearch._showMessage('Search unavailable. Check your connection.', true);
     }
   },
