@@ -1,6 +1,4 @@
 // ── 0. CONFIG ──────────────────────────────────────────────────────────────────
-// Free API key: https://fdc.nal.usda.gov/api-key-signup.html
-const USDA_API_KEY = 'DEMO_KEY';
 
 // ── 1. CONSTANTS & FOOD DATABASE ──────────────────────────────────────────────
 
@@ -594,16 +592,15 @@ const FoodSearch = {
 
     try {
       const url =
-        `https://api.nal.usda.gov/fdc/v1/foods/search` +
-        `?query=${encodeURIComponent(query)}` +
-        `&api_key=${USDA_API_KEY}` +
-        `&dataType=Foundation,SR%20Legacy,Survey%20(FNDDS)` +
-        `&pageSize=8`;
+        `https://world.openfoodfacts.org/cgi/search.pl` +
+        `?search_terms=${encodeURIComponent(query)}` +
+        `&search_simple=1&action=process&json=1&page_size=8` +
+        `&fields=product_name,brands,nutriments`;
       const res = await fetch(url, { signal: FoodSearch._abortController.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       FoodSearch._setSpinner(false);
-      FoodSearch._showResults(data.foods || []);
+      FoodSearch._showResults(data.products || []);
     } catch (err) {
       if (err.name === 'AbortError') return;
       FoodSearch._setSpinner(false);
@@ -619,12 +616,21 @@ const FoodSearch = {
       return;
     }
 
-    FoodSearch._lastResults = foods.map(food => ({
-      name:     FoodSearch._titleCase(food.description),
-      unit:     'g',
-      qty:      100,
-      ...FoodSearch._extractNutrients(food.foodNutrients || []),
-    }));
+    FoodSearch._lastResults = foods
+      .filter(food => food.product_name)
+      .map(food => ({
+        name: FoodSearch._titleCase(
+          food.brands ? `${food.product_name} (${food.brands})` : food.product_name
+        ),
+        unit: 'g',
+        qty:  100,
+        ...FoodSearch._extractNutrients(food.nutriments || {}),
+      }));
+
+    if (!FoodSearch._lastResults.length) {
+      FoodSearch._showMessage('No results found.');
+      return;
+    }
 
     list.innerHTML = FoodSearch._lastResults.map((food, i) => `
       <li class="search-result-item" data-idx="${i}">
@@ -660,12 +666,14 @@ const FoodSearch = {
     document.getElementById('food-search-spinner').style.display = visible ? '' : 'none';
   },
 
-  _extractNutrients(foodNutrients) {
-    const find = id => {
-      const n = foodNutrients.find(n => n.nutrientId === id);
-      return n ? Utils.roundNum(n.value) : 0;
+  _extractNutrients(n) {
+    const get = key => Utils.roundNum(n[key] ?? 0);
+    return {
+      calories: get('energy-kcal_100g'),
+      carbs:    get('carbohydrates_100g'),
+      protein:  get('proteins_100g'),
+      fat:      get('fat_100g'),
     };
-    return { calories: find(1008), carbs: find(1005), protein: find(1003), fat: find(1004) };
   },
 
   _titleCase(str) {
